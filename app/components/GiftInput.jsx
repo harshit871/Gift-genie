@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import Image from "next/image";
 
 // Mirrors autoResizeTextarea from utils.js
 function autoResizeTextarea(el) {
@@ -45,7 +46,13 @@ export default function GiftInput({ isLoading, hasResponse, onSubmit }) {
           disabled={isLoading}
         >
           <span className="lamp-icon">
-            <img src="/lamp.svg" alt="Magic Lamp" className="lamp-icon-img" />
+            <Image
+                src="/lamp.svg" 
+                alt="Magic Lamp" 
+                className="lamp-icon-img" 
+                width={156} 
+                height={156} 
+            />
           </span>
           <span className="lamp-text">
             {isLoading ? "Summoning Gift Ideas..." : "Rub the Lamp"}
