@@ -2,6 +2,12 @@
 
 import { useRef } from "react";
 
+// Mirrors autoResizeTextarea from utils.js
+function autoResizeTextarea(el) {
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
 export default function GiftInput({ isLoading, hasResponse, onSubmit }) {
   const textareaRef = useRef(null);
 
@@ -24,6 +30,7 @@ export default function GiftInput({ isLoading, hasResponse, onSubmit }) {
           <textarea
             id="user-input"
             ref={textareaRef}
+            onInput={(e) => autoResizeTextarea(e.currentTarget)}
             placeholder="e.g., My friend who loves hiphop music has a birthday coming up in 3 days. 40-60 bucks budget. I live in..."
           />
         </div>
