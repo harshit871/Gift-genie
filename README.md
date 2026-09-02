@@ -1,65 +1,63 @@
 # Gift Genie 🧞
 
-An AI-powered gift recommendation app that searches the web in real time to suggest thoughtful, specific gifts with prices and purchase links.
+An AI-powered gift recommendation app that searches the web in real time to suggest thoughtful, specific gifts with prices and purchase links — streamed live to your browser.
 
 ## How It Works
 
-1. Describe the person and occasion in the text area (e.g. budget, interests, time constraints, location).
-2. Hit **"Rub the Lamp"** — the frontend posts your prompt to the Express backend.
-3. The server calls the AI Responses API with the `web_search_preview` tool and **streams the response back** to the browser via Server-Sent Events (SSE).
-4. The client reads the SSE stream chunk by chunk, accumulating Markdown and re-rendering it live as tokens arrive.
-5. When the server sends the `[DONE]` sentinel, the stream loop exits cleanly and the UI resets to idle.
+1. Describe the person and occasion in the textarea (e.g. budget, interests, location, time constraints).
+2. Hit **"Rub the Lamp"** — the React frontend posts your prompt to a Next.js Route Handler.
+3. The server calls an OpenAI-compatible API with `stream: true` and **streams the response back** via Server-Sent Events (SSE).
+4. The client reads SSE chunks, accumulates Markdown deltas, and re-renders them live as tokens arrive.
+5. When the server sends the `[DONE]` sentinel, the stream loop exits and the UI resets to idle.
 
 ## Tech Stack
 
-| Layer        | Tool                                                                                                    |
-| ------------ | ------------------------------------------------------------------------------------------------------- |
-| Frontend     | Vanilla JS + Vite (dev bundler only)                                                                    |
-| Backend      | [Express](https://expressjs.com/) (Node.js)                                                             |
-| AI SDK       | [OpenAI Node SDK](https://github.com/openai/openai-node) (Responses API with `web_search_preview` tool) |
-| Streaming    | Server-Sent Events (SSE) — `response.output_text.delta` events forwarded in real time                   |
-| Markdown     | [marked](https://github.com/markedjs/marked)                                                            |
-| Sanitization | [DOMPurify](https://github.com/cure53/DOMPurify)                                                        |
-| Styling      | Vanilla CSS (LCH color system, CSS custom properties)                                                   |
+| Layer        | Tool                                                                                                 |
+| ------------ | ---------------------------------------------------------------------------------------------------- |
+| Framework    | [Next.js 16](https://nextjs.org/) (App Router)                                                       |
+| UI           | [React 19](https://react.dev/) — Server + Client Components                                          |
+| AI SDK       | [OpenAI Node SDK](https://github.com/openai/openai-node) (Responses API, `stream: true`)             |
+| Streaming    | Server-Sent Events (SSE) — `response.output_text.delta` events forwarded in real time                |
+| Markdown     | [marked](https://github.com/markedjs/marked)                                                         |
+| Sanitization | [DOMPurify](https://github.com/cure53/DOMPurify)                                                     |
+| Styling      | Vanilla CSS (`globals.css`) — dark theme, CSS custom properties, animations                          |
 
-> **Note:** The OpenAI SDK is used with a custom `baseURL`, so any OpenAI-compatible provider (Groq, OpenRouter, etc.) works.
+> **Note:** The OpenAI SDK is initialised with a custom `baseURL`, so any OpenAI-compatible provider (Groq, OpenRouter, etc.) works out of the box.
 
 ## Prerequisites
 
 - **Node.js** ≥ 18
-- An API key for an OpenAI-compatible provider that supports the Responses API with `web_search_preview`
+- An API key for an OpenAI-compatible provider that supports the Responses API with streaming
 
 ## Getting Started
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/harshit871/Gift-genie.git
-cd Gift-genie
+git clone https://github.com/harshit871/gift-genie.git
+cd gift-genie
 
 # 2. Install dependencies
 npm install
 
-# 3. Create a .env file in the project root
-cp .env.example .env   # or create manually
+# 3. Set up environment variables (see below)
+cp .env.example .env   # or create .env manually
 ```
 
 ### Environment Variables
 
-Create a `.env` file with the following:
+Create a `.env` file in the project root:
 
 ```env
 AI_URL=https://api.your-provider.com/v1
 AI_KEY=your-api-key-here
 AI_MODEL=your-model-name
-PORT=3000          # optional, defaults to 3000
 ```
 
-| Variable   | Description                                            |
-| ---------- | ------------------------------------------------------ |
-| `AI_URL`   | Base URL of the OpenAI-compatible API provider         |
-| `AI_KEY`   | API key for authentication (**never sent to browser**) |
-| `AI_MODEL` | Model identifier (e.g. `gpt-4o`, `openai/gpt-oss-20b`) |
-| `PORT`     | Port the Express server listens on (default: `3000`)   |
+| Variable   | Description                                                     |
+| ---------- | --------------------------------------------------------------- |
+| `AI_URL`   | Base URL of your OpenAI-compatible API provider                 |
+| `AI_KEY`   | API key for authentication (**never sent to the browser**)      |
+| `AI_MODEL` | Model identifier (e.g. `gpt-4o`, `openai/gpt-oss-20b`)         |
 
 ### Run the Dev Server
 
@@ -67,56 +65,86 @@ PORT=3000          # optional, defaults to 3000
 npm run dev
 ```
 
-Vite's dev server proxies `/api/*` requests to the Express backend. Open `http://localhost:5173` in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### Run the Production Server
+### Build for Production
 
 ```bash
-# Build the frontend bundle
 npm run build
-
-# Start the Express server (serves the built frontend + API)
-node server.js
+npm run start
 ```
-
-The app will be available at `http://localhost:3000` (or whichever `PORT` you set).
 
 ## Project Structure
 
 ```
-Gift-genie/
-├── assets/
-│   ├── genie.svg          # Header genie icon
-│   └── lamp.svg           # Lamp button icon
-├── index.html             # Entry HTML (single page)
-├── index.js               # Frontend — form handling, SSE stream reader, Markdown renderer
-├── utils.js               # Helpers — textarea resize, loading/stream UI state
-├── style.css              # All styles (dark theme, animations, responsive)
-├── server.js              # Express backend — AI proxy, SSE streaming endpoint
-├── vite.config.js         # Vite config — dev proxy for /api/* → Express
-├── package.json
-├── .env                   # Your local env vars (git-ignored)
-└── .gitignore
+gift-genie/
+├── app/
+│   ├── api/
+│   │   └── gift/
+│   │       └── route.js        # Next.js Route Handler — SSE streaming endpoint
+│   ├── components/
+│   │   ├── AppContent.jsx      # Client Component — state management + SSE reader
+│   │   ├── GiftInput.jsx       # Client Component — textarea + submit button
+│   │   └── Response.jsx        # Client Component — live Markdown renderer
+│   ├── globals.css             # Global styles (dark theme, animations)
+│   ├── layout.js               # Root layout (metadata, body)
+│   └── page.js                 # Home page — header + <AppContent />
+├── public/
+│   ├── genie.svg               # Header genie icon
+│   └── lamp.svg                # Lamp button icon
+├── .env                        # Local env vars (git-ignored)
+├── next.config.mjs
+└── package.json
 ```
 
 ### Key Files
 
-- **[`server.js`](server.js)** — Express app. Exposes `POST /api/gift`, creates an OpenAI streaming request (`stream: true`), and forwards each `response.output_text.delta` event to the client as an SSE `data:` line. Ends the stream with a `data: [DONE]` sentinel.
-- **[`index.js`](index.js)** — Posts the user prompt to `/api/gift`, reads the SSE stream with a `ReadableStream` reader, accumulates Markdown deltas, and re-renders them live with `marked` + `DOMPurify`. Uses a `streamDone` flag to cleanly exit the read loop when `[DONE]` is received.
-- **[`utils.js`](utils.js)** — `setLoading()` / `showStream()` manage UI state transitions; `autoResizeTextarea()` grows the input as the user types.
-- **[`vite.config.js`](vite.config.js)** — Configures the Vite dev server proxy so `/api/*` requests are forwarded to the local Express server without CORS issues.
+- **[`app/api/gift/route.js`](app/api/gift/route.js)** — The Next.js Route Handler (`POST /api/gift`). Creates a `ReadableStream`, calls the OpenAI Responses API with `stream: true`, and forwards each `response.output_text.delta` event to the browser as an SSE `data:` line. Ends with `data: [DONE]`.
+
+- **[`app/components/AppContent.jsx`](app/components/AppContent.jsx)** — Top-level client component that owns all state (`isLoading`, `accumulated`, `isStreaming`, `errorMsg`). Fetches `/api/gift`, manually reads the SSE stream, accumulates Markdown deltas via `setAccumulated`, and passes state down as props.
+
+- **[`app/components/GiftInput.jsx`](app/components/GiftInput.jsx)** — Controlled textarea + submit button. Auto-resizes as the user types. Button label and CSS class adapt based on `isLoading` and `hasResponse` props.
+
+- **[`app/components/Response.jsx`](app/components/Response.jsx)** — Renders the accumulated Markdown using `marked` + `DOMPurify`. Shows a loading state while waiting, live Markdown while streaming, or an error message if something goes wrong.
+
+## Data Flow
+
+```
+Browser (React)
+    │
+    │  POST /api/gift  { userPrompt }
+    ▼
+Next.js Route Handler  (app/api/gift/route.js)
+    │
+    │  openai.responses.create({ stream: true })
+    ▼
+OpenAI-compatible API
+    │
+    │  response.output_text.delta → "Hel"
+    │  response.output_text.delta → "lo"
+    │  response.output_text.delta → "!"
+    ▼
+Next.js  (ReadableStream + controller.enqueue)
+    │
+    │  data: {"delta":"Hel"}
+    │  data: {"delta":"lo"}
+    │  data: {"delta":"!"}
+    │  data: [DONE]
+    ▼
+Browser  (AppContent SSE reader → setAccumulated → Response renders live Markdown)
+```
 
 ## How the AI Integration Works
 
-1. The user submits a prompt via the frontend form.
-2. `index.js` `POST`s the prompt to `POST /api/gift` on the Express backend.
-3. `server.js` sets SSE headers (`Content-Type: text/event-stream`) and opens a streaming Responses API call with the `web_search_preview` tool enabled.
-4. For every `response.output_text.delta` event, the server writes `data: {"delta":"..."}` to the response.
-5. Once the stream ends, the server writes `data: [DONE]` and closes the connection.
-6. The frontend reads each SSE line, accumulates the deltas, parses them with `marked`, sanitises with `DOMPurify`, and injects into the DOM — giving the user a live, streaming Markdown render.
-7. On receiving `[DONE]`, a `streamDone` flag exits the read loop without attempting another `reader.read()` on the closed stream.
+1. The user submits a prompt via `GiftInput`.
+2. `AppContent` `POST`s the prompt to `/api/gift`.
+3. `route.js` sets SSE headers (`Content-Type: text/event-stream`) and opens a streaming Responses API call.
+4. For every `response.output_text.delta` event, the server writes `data: {"delta":"..."}` to the response stream.
+5. Once the AI stream ends, the server writes `data: [DONE]` and closes the connection.
+6. The client reads each SSE line, accumulates the deltas, parses them with `marked`, sanitises with `DOMPurify`, and injects into the DOM — giving the user a live Markdown render.
+7. On receiving `[DONE]`, a `streamDone` flag exits the read loop cleanly.
 
-> **🔒 Security:** The API key lives exclusively in `.env` and is only accessed by the Express server. It is **never bundled into or sent to the browser**.
+> **🔒 Security:** The API key lives exclusively in `.env` and is only read by the Next.js server. It is **never bundled into or sent to the browser**.
 
 ## License
 
